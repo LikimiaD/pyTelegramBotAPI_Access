@@ -1,53 +1,111 @@
 #pip install pyTelegramBotAPI
 import telebot
 from settings import TELEGRAM_TOKEN
-from templates import HELP_TEMPLATE, ERROR_TEMPLATE
+from templates import HELP_TEMPLATE, ROOM_525, ROOM_529
+from misis_lk import Schedule
 
 from telebot import types
+from datetime import date, datetime
+
+import threading
 
 class TelegramBot:
     def __init__(self, telegram_token):
         self.telegram_bot = telebot.TeleBot(telegram_token)
+        self.parser = Schedule()
+        self.daysKeyboard_525 = None
+        self.daysKeyboard_529 = None
+        self.roomsKeyboard = None
+        self.lastUpdate = None
+        self.room525 = {}
+        self.room529 = {}
+
+    def preloadInformation(self, value = 1):
+        if (value):
+            print("Парсинг информации с lk misis")
+        else:
+            print("Обновление информации")
+        self.room525['upper'] = self.parser.getSchedule(ROOM_525, self.parser.startDate(1))
+        self.room525['lower'] = self.parser.getSchedule(ROOM_525, self.parser.startDate(0))
+
+        self.room529['upper'] = self.parser.getSchedule(ROOM_525, self.parser.startDate(1))
+        self.room529['lower'] = self.parser.getSchedule(ROOM_525, self.parser.startDate(0))
+        print("Вся информация загружена, бот запускается...")
+        self.lastUpdate = date.today()
+
+    def loadDaysButtons(self):
+        keyboard = [[types.InlineKeyboardButton("ПН", callback_data='525_upperDay1'),
+                    types.InlineKeyboardButton("ВТ", callback_data='525_upperDay2'),
+                    types.InlineKeyboardButton("СР", callback_data='525_upperDay3'),
+                    types.InlineKeyboardButton("ЧТ", callback_data='525_upperDay4'),
+                    types.InlineKeyboardButton("ПТ", callback_data='525_upperDay5'),
+                    types.InlineKeyboardButton("СБ", callback_data='525_upperDay6')],
+
+                    [types.InlineKeyboardButton("ПН", callback_data='525_lowerDay1'),
+                    types.InlineKeyboardButton("ВТ", callback_data='525_lowerDay2'),
+                    types.InlineKeyboardButton("СР", callback_data='525_lowerDay3'),
+                    types.InlineKeyboardButton("ЧТ", callback_data='525_lowerDay4'),
+                    types.InlineKeyboardButton("ПТ", callback_data='525_lowerDay5'),
+                    types.InlineKeyboardButton("СБ", callback_data='525_lowerDay6')],
+                   ]
+        self.daysKeyboard_525 =  types.InlineKeyboardMarkup(keyboard)
+        keyboard = [[types.InlineKeyboardButton("ПН", callback_data='529_upperDay1'),
+                    types.InlineKeyboardButton("ВТ", callback_data='529_upperDay2'),
+                    types.InlineKeyboardButton("СР", callback_data='529_upperDay3'),
+                    types.InlineKeyboardButton("ЧТ", callback_data='529_upperDay4'),
+                    types.InlineKeyboardButton("ПТ", callback_data='529_upperDay5'),
+                    types.InlineKeyboardButton("СБ", callback_data='529_upperDay6')],
+
+                    [types.InlineKeyboardButton("ПН", callback_data='529_lowerDay1'),
+                    types.InlineKeyboardButton("ВТ", callback_data='529_lowerDay2'),
+                    types.InlineKeyboardButton("СР", callback_data='529_lowerDay3'),
+                    types.InlineKeyboardButton("ЧТ", callback_data='529_lowerDay4'),
+                    types.InlineKeyboardButton("ПТ", callback_data='529_lowerDay5'),
+                    types.InlineKeyboardButton("СБ", callback_data='529_lowerDay6')],
+                   ]
+        self.daysKeyboard_529 =  types.InlineKeyboardMarkup(keyboard)
+
+    def loadRoomsButtons(self):
+        self.roomsKeyboard=types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item1=types.KeyboardButton("Г-525")
+        item2=types.KeyboardButton("Г-529")
+        self.roomsKeyboard.add(item1)
+        self.roomsKeyboard.add(item2)
+
+    def showDayInfo(self, room = 'u', day = 0):
+        text = "Расписание для кабинета {0}\n\n".format("Г-525" if room == 'u' else "Г-529")
+        text += "Кабинет свободен в период:\n\n"
+        if (room == 'u'):
+            for time in self.room525['upper'][list(self.room525['upper'].keys())[day]]:
+                time = time.split('-')
+                text += "с {0} до {1}\n".format(time[0],time[1])
+        else:
+            for time in self.room525['lower'][list(self.room525['lower'].keys())[day]]:
+                time = time.split('-')
+                text += "с {0} до {1}\n".format(time[0],time[1])
+
+        text += "\n\nСейчас идет {0} неделя".format("верхняя" if datetime.now().isocalendar()[1] % 2 == 0 else "нижняя") 
+
+        return text
+
 
     def help(self, message):
-        markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
-        item1=types.KeyboardButton("Г-521")
-        item2=types.KeyboardButton("Г-525")
-        markup.add(item1)
-        markup.add(item2)
-        self.telegram_bot.reply_to(message, text=HELP_TEMPLATE, parse_mode= 'Markdown',reply_markup=markup)
-    def Kab521(self,message):
-        '''
-        markup=types.InlineKeyboardMarkup()
-        item1= types.InlineKeyboardButton(text="ПН",switch_inline_query="")
-        item2= types.InlineKeyboardButton(text="ВТ",switch_inline_query="Telegram")
-        markup.add(item1,item2)
-        '''
-        keyboard = [[types.InlineKeyboardButton("ПН", callback_data='HElist8'),
-                         types.InlineKeyboardButton("ВТ", callback_data='HRlist8'),
-                        types.InlineKeyboardButton("СР", callback_data='CClist8'),
-                          types.InlineKeyboardButton("ЧТ", callback_data='SPlist8'),
-                        types.InlineKeyboardButton("ПТ", callback_data='CFlist8'),
-                          types.InlineKeyboardButton("СБ", callback_data='ALLlist8'),
-                            types.InlineKeyboardButton("ВС", callback_data='CFlist8')],
-                    [types.InlineKeyboardButton("ПН", callback_data='HElist8'),
-                         types.InlineKeyboardButton("ВТ", callback_data='HRlist8'),
-                        types.InlineKeyboardButton("СР", callback_data='CClist8'),
-                          types.InlineKeyboardButton("ЧТ", callback_data='SPlist8'),
-                        types.InlineKeyboardButton("ПТ", callback_data='CFlist8'),
-                          types.InlineKeyboardButton("СБ", callback_data='ALLlist8'),
-                            types.InlineKeyboardButton("ВС", callback_data='CFlist8')]
-                   ]
-        
-        markup =  types.InlineKeyboardMarkup(keyboard)
-      
-        self.telegram_bot.send_message(message.chat.id, text="Расписание кабинета Г-521", reply_markup=markup)
+        if (self.lastUpdate != date.today()):
+            self.preloadInformation(0)
+        if (self.roomsKeyboard == None):
+            self.loadRoomsButtons()
+        self.telegram_bot.reply_to(message, text=HELP_TEMPLATE, parse_mode= 'Markdown',reply_markup=self.roomsKeyboard)
 
-    '''def Kab525(self,message):
-        markup=types.ReplyKeyboardMarkup()
-        #markup.add(item)
-        self.telegram_bot.send_message(message.chat.id, text="Расписание кабинета Г-525",reply_markup=markup)
-    '''
+        
+    def showInformation(self,message, room = 1):
+        if (self.lastUpdate != date.today()):
+            self.preloadInformation(0)
+        if (self.daysKeyboard_525 == None or self.daysKeyboard_529 == None):
+            self.loadDaysButtons()
+        if room:
+            self.telegram_bot.send_message(message.chat.id, text="Расписание кабинета 525", reply_markup=self.daysKeyboard_525)
+        else:
+            self.telegram_bot.send_message(message.chat.id, text=f"Расписание кабинета 529", reply_markup=self.daysKeyboard_529)
     
 
 
@@ -62,11 +120,118 @@ class TelegramBot:
 
         @self.telegram_bot.message_handler(content_types=['text'])
         def text_handler(message):
-            if message.text=="Г-521": self.Kab521(message)
-            elif message.text=="Г-525": self.Kab525(message)
+            if message.text=="Г-525": self.showInformation(message)
+            elif message.text=="Г-529": self.showInformation(message, 0)
+
+        @self.telegram_bot.callback_query_handler(func=lambda call: True)
+        
+        def callback_data(message):
+            try:
+                if message.data == '525_upperDay1':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_525)
+                elif message.data == '525_upperDay2':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_525)
+                elif message.data == '525_upperDay3':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_525)
+                elif message.data == '525_upperDay4':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_525)
+                elif message.data == '525_upperDay5':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_525)
+                elif message.data == '525_upperDay6':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_525)
+                elif message.data == '525_lowerDay1':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_525)
+                elif message.data == '525_lowerDay2':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_525)
+                elif message.data == '525_lowerDay3':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_525)
+                elif message.data == '525_lowerDay4':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_525)
+                elif message.data == '525_lowerDay5':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_525)
+                elif message.data == '525_lowerDay6':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_525)
+                    
+
+
+                if message.data == '529_upperDay1':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_529)
+                elif message.data == '529_upperDay2':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_529)
+                elif message.data == '529_upperDay3':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_529)
+                elif message.data == '529_upperDay4':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_529)
+                elif message.data == '529_upperDay5':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_529)
+                elif message.data == '529_upperDay6':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_529)
+                elif message.data == '529_lowerDay1':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_529)
+                elif message.data == '529_lowerDay2':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_529)
+                elif message.data == '529_lowerDay3':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_529)
+                elif message.data == '529_lowerDay4':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_529)
+                elif message.data == '529_lowerDay5':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_529)
+                elif message.data == '529_lowerDay6':
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.showDayInfo(message.data[4], (int(message.data[-1])-1)),
+                                                        reply_markup= self.daysKeyboard_529)
+            except:
+                pass
 
         self.telegram_bot.polling()
 
 if __name__ == '__main__':
     bot = TelegramBot(TELEGRAM_TOKEN)
+    bot.preloadInformation()
     bot.run()
