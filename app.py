@@ -2,14 +2,12 @@
 import telebot
 from settings import TELEGRAM_TOKEN
 from templates import HELP_TEMPLATE, ERROR_TEMPLATE
-from events import Events
 
 from telebot import types
 
 class TelegramBot:
     def __init__(self, telegram_token):
         self.telegram_bot = telebot.TeleBot(telegram_token)
-        self.events = Events()
 
     def help(self, message):
         markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
