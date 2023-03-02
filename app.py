@@ -1,7 +1,8 @@
 #pip install pyTelegramBotAPI
 import telebot
-from settings import TELEGRAM_TOKEN
+from settings import TELEGRAM_TOKEN, OWNERS_LIST
 from templates import HELP_TEMPLATE, ROOM_525, ROOM_529
+from check_rights import is_owner
 from misis_lk import Schedule
 
 from telebot import types
@@ -11,6 +12,7 @@ class TelegramBot:
     def __init__(self, telegram_token):
         self.telegram_bot = telebot.TeleBot(telegram_token)
         self.parser = Schedule()
+        self.ownerKeyboard = None
         self.daysKeyboard_525 = None
         self.daysKeyboard_529 = None
         self.roomsKeyboard = None
@@ -47,6 +49,7 @@ class TelegramBot:
                      types.InlineKeyboardButton("СБ", callback_data='525_lowerDay6')],
                    ]
         self.daysKeyboard_525 =  types.InlineKeyboardMarkup(keyboard)
+
         keyboard = [[types.InlineKeyboardButton("ПН", callback_data='529_upperDay1'),
                      types.InlineKeyboardButton("ВТ", callback_data='529_upperDay2'),
                      types.InlineKeyboardButton("СР", callback_data='529_upperDay3'),
@@ -62,6 +65,9 @@ class TelegramBot:
                      types.InlineKeyboardButton("СБ", callback_data='529_lowerDay6')],
                    ]
         self.daysKeyboard_529 =  types.InlineKeyboardMarkup(keyboard)
+        
+        keyboard = [[types.InlineKeyboardButton("Одобрить", callback_data='owner_Y'),
+                     types.InlineKeyboardButton("Отказать", callback_data='owner_N')]]
 
     def loadRoomsButtons(self):
         self.roomsKeyboard=types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -136,15 +142,27 @@ class TelegramBot:
             self.telegram_bot.send_message(message.chat.id, text="Расписание кабинета 525", reply_markup=self.daysKeyboard_525)
         else:
             self.telegram_bot.send_message(message.chat.id, text=f"Расписание кабинета 529", reply_markup=self.daysKeyboard_529)
-    
 
+
+    # Change func name!
+    def reg(self, message):
+        if not message.from_user.id in OWNERS_LIST:
+            for owner_id in OWNERS_LIST:
+                self.telegram_bot.send_message(owner_id, text=f"Написал человек с ID {message.from_user.id}")
+                self.telegram_bot.reply_to(message, text="Информация отправлена администрации")
+                
+        else:
+            pass
 
       
     def run(self):
-        
         @self.telegram_bot.message_handler(commands=['help', 'start'])
         def help_handler(message):
             self.help(message)
+
+        @self.telegram_bot.message_handler(commands=['register'])
+        def register(message):
+            self.reg(message)
 
         @self.telegram_bot.message_handler(content_types=['text'])
         def text_handler(message):
@@ -152,6 +170,7 @@ class TelegramBot:
             elif message.text=="Г-529": self.showInformation(message, 0)
             else:
                 self.telegram_bot.reply_to(message, text=f"Я ничего не нашел.\n\nВарианты запроса: Г-525 или Г-529")
+                print(message.from_user.id)
 
         @self.telegram_bot.callback_query_handler(func=lambda call: True)
         def callback_data(message):
