@@ -122,3 +122,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Telegram bot
+settings.py
+test.py
+# Visual
+/.vs
+.vs/

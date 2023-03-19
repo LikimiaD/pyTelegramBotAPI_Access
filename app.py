@@ -14,6 +14,7 @@ from commands.templates.check_values import USER_STATUS, USER_STATUS_DICT
 from telebot import types
 from datetime import date
 
+
 class TelegramBot:
     def __init__(self, telegram_token):
         self.telegram_bot = telebot.TeleBot(telegram_token)
@@ -22,6 +23,11 @@ class TelegramBot:
         self.Room = Room()
         self.lastUpdate = self.Room.preloadInformation()
         self.Room.loadDaysButtons()
+
+        self.DICT_ROOM_NUM = {
+            525 : [self.Room.daysKeyboard_525, self.Room.RegdaysKeyboard_525],
+            529 : [self.Room.daysKeyboard_529, self.Room.RegdaysKeyboard_529]
+            }
 
     def help(self, message):
         if (self.lastUpdate != date.today()):
@@ -35,7 +41,7 @@ class TelegramBot:
                 self.telegram_bot.reply_to(message, text=HELP_TEMPLATE, parse_mode= 'Markdown',reply_markup=self.Room.OwnerKeyboard)
 
         
-    def showInformation(self,message, room = 1):
+    def showInformation(self,message, room = False):
         if (self.lastUpdate != date.today()):
             self.Room.preloadInformation(0)
         if (self.Room.daysKeyboard_525 == None or self.Room.daysKeyboard_529 == None):
@@ -81,8 +87,8 @@ class TelegramBot:
 
         @self.telegram_bot.message_handler(content_types=['text'])
         def text_handler(message):
-            if message.text=="Г-525": self.showInformation(message)
-            elif message.text=="Г-529": self.showInformation(message, 0)
+            if message.text=="Г-525": self.showInformation(message, room = True)
+            elif message.text=="Г-529": self.showInformation(message, room = False)
             elif message.text=="Узнать свой статус": self.telegram_bot.reply_to(message, text=self.UserInfo.member_status_call(message))
 
             elif message.text=="Работа" and self.UserInfo.status_call(message) == "volunteer":
@@ -99,23 +105,28 @@ class TelegramBot:
 
         @self.telegram_bot.callback_query_handler(func=lambda call: True)
         def callback_data(message):
+            print(message.data)
             try:
-                if '525_upperDay' or '525_lowerDay' in message.data:
+                if ('_reg_upperDay' in message.data) or ('_reg_lowerDay' in message.data):
+                    room_num = int(message.data[:3])
                     self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
-                                                        text=self.Room.showDayInfo(525, message.data[4], (int(message.data[-1])-1)),
-                                                        reply_markup= self.Room.daysKeyboard_525)
-                elif '529_upperDay' or '529_lowerDay' in message.data:
+                                                        text=self.Room.showDayInfo(room_num = room_num, room = message.data[8], day = (int(message.data[-1]))),
+                                                        reply_markup= self.DICT_ROOM_NUM[room_num][1])
+                elif ('_upperDay' in message.data) or ('_lowerDay' in message.data):
+                    room_num = int(message.data[:3])
                     self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
-                                                        text=self.Room.showDayInfo(529, message.data[4], (int(message.data[-1])-1)),
-                                                        reply_markup= self.Room.daysKeyboard_529)
-                elif 'register_525':
-                    self.telegram_bot.edit_massage_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
+                                                        text=self.Room.showDayInfo(room_num = room_num, room = message.data[4], day = (int(message.data[-1]))),
+                                                        reply_markup= self.DICT_ROOM_NUM[room_num][0])
+                    
+                elif message.data == 'reg_day_append':
+                    grid_information(message)
+                    # self.telegram_bot.send_message(message, text="{0} {1} {2}".format(LIST[0], LIST[1], LIST[2]))
+                     
+                elif 'register_' in message.data:
+                    room_num = int(message.data[-3:])
+                    self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
                                                         text="Выберите день.\n\nВерхняя строчка - текущая неделя\n\nНидняя строчка - следующая неделя",
-                                                        reply_markup= self.Room.daysKeyboard_525)
-                elif 'register_529':
-                    self.telegram_bot.edit_massage_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
-                                                        text="Выберите день.\n\nВерхняя строчка - текущая неделя\n\nНидняя строчка - следующая неделя",
-                                                        reply_markup= self.Room.daysKeyboard_529)
+                                                        reply_markup= self.DICT_ROOM_NUM[room_num][1])
                 elif 'register_Y':
                     telegram_id, start_time, end_time, date = correct_template(message)
                     self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
@@ -126,6 +137,7 @@ class TelegramBot:
                     self.telegram_bot.edit_message_text(chat_id=message.message.chat.id, message_id=message.message.message_id,
                                                         text="Спасибо за обработку! Ответ отправлен.")
                     self.telegram_bot.send_message(telegram_id, text= "Добрый день! К сожалению мы не сможем вас принять {0} в {1}".format(date, start_time))
+                    
                 else:
                     pass
             except Exception as ex:

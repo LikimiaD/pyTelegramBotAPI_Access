@@ -3,9 +3,15 @@ from telebot import types
 from datetime import date, datetime
 
 from .templates.user_default_keyboard import USER, VOLUNTEER, OWNER
-from .templates.keyboard_templates import KEYBOARD_525, KEYBOARD_529, USER_REGISTER, ROOM_REGISTER
-from .templates.core import ROOM_525, ROOM_529
+from .templates.keyboard_templates import (KEYBOARD_525,
+                                           KEYBOARD_529,
+                                           REG_KEYBOARD_529,
+                                           REG_KEYBOARD_525,
+                                           USER_REGISTER,
+                                           ROOM_REGISTER)
+from .templates.core import ROOM_525, ROOM_529, NUMBER_TO_DAY
 from .misis_lk import Schedule
+
 
 class Room:
     def __init__(self) -> None:
@@ -14,6 +20,8 @@ class Room:
         self.daysKeyboard_529 = None
         self.UserRegister = None
         self.RoomRegisterKeyboard = None
+        self.RegdaysKeyboard_525 = None
+        self.RegdaysKeyboard_529 = None
         self.UserKeyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
         self.VolunteerKeyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
         self.OwnerKeyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -46,6 +54,11 @@ class Room:
     def loadDaysButtons(self):
         self.daysKeyboard_525 =  types.InlineKeyboardMarkup(KEYBOARD_525)
         self.daysKeyboard_529 =  types.InlineKeyboardMarkup(KEYBOARD_529)
+
+        self.RegdaysKeyboard_525 =  types.InlineKeyboardMarkup(REG_KEYBOARD_525)
+        self.RegdaysKeyboard_529 =  types.InlineKeyboardMarkup(REG_KEYBOARD_529)
+
+
         self.UserRegister = types.InlineKeyboardMarkup()
         for item in USER_REGISTER:
             self.UserRegister.add(item)
@@ -53,49 +66,27 @@ class Room:
         for item in ROOM_REGISTER:
             self.RoomRegisterKeyboard.add(item)
 
-    def showDayInfo(self, room_num = 525, room = 'u', day = 0,):
-        check: bool = True
-        text = "Расписание для кабинета {0}\n\n".format("Г-525" if room == 'u' else "Г-529")
-        if room_num == 525:
-            if (room == 'u'):
-                LIST = self.room525['upper'][list(self.room525['upper'].keys())[day]]
-                if len(LIST) > 0:
-                    text += "Кабинет свободен в период:\n\n"
-                    for time in LIST:
-                        time = time.split('-')
-                        text += "с {0} до {1}\n".format(time[0],time[1])
-                else:
-                    check = False
+    def showDayInfo(self, room_num = 525, room = 'u', day = 0):
+        text = "Расписание для кабинета {0}\n\n".format("Г-525" if room_num == 525 else "Г-529")
+        print(room_num)
+        if (room == 'u'):
+            if room_num == 525:
+                LIST = self.room525['upper'][list(self.room525['upper'].keys())[day-1]]
             else:
-                LIST = self.room525['lower'][list(self.room525['lower'].keys())[day]]
-                if len(LIST) > 0:
-                    text += "Кабинет свободен в период:\n\n"
-                    for time in LIST:
-                        time = time.split('-')
-                        text += "с {0} до {1}\n".format(time[0],time[1])
-                else:
-                    check = False
+                LIST = self.room529['upper'][list(self.room529['upper'].keys())[day-1]]
         else:
-            if (room == 'u'):
-                LIST = self.room529['upper'][list(self.room529['upper'].keys())[day]]
-                if len(LIST) > 0:
-                    text += "Кабинет свободен в период:\n\n"
-                    for time in LIST:
-                        time = time.split('-')
-                        text += "с {0} до {1}\n".format(time[0],time[1])
-                else:
-                    check = False
+            if room_num == 525:
+                LIST = self.room525['lower'][list(self.room525['lower'].keys())[day-1]]
             else:
-                LIST = self.room529['lower'][list(self.room529['lower'].keys())[day]]
-                if len(LIST) > 0:
-                    text += "Кабинет свободен в период:\n\n"
-                    for time in LIST:
-                        time = time.split('-')
-                        text += "с {0} до {1}\n".format(time[0],time[1])
-                else:
-                    check = False
-        if  check:
-            text += "\n\nСейчас вы просматриваете {0} неделю".format("текущую" if datetime.now().isocalendar()[1] % 2 == 0 else "следующую") 
+                LIST = self.room529['lower'][list(self.room529['lower'].keys())[day-1]]
+
+        if len(LIST) > 0:
+            text += "В {0} кабинет свободен в период:\n\n".format(NUMBER_TO_DAY[day])
+            for time in LIST:
+                time = time.split('-')
+                text += "с {0} до {1}\n".format(time[0],time[1])
+            
+            text += "\n\nСейчас вы просматриваете {0} неделю.".format("текущую" if room == 'u' else "следующую") 
             return text
         else:
             text += "К сожалению, нету свободных пар :c"
